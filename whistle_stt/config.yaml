@@ -1,0 +1,24 @@
+name: Whistle STT
+version: 0.1.0
+slug: whistle_stt
+description: Lokalne rozpoznawanie mowy (Cactus Whistle) przez protokół Wyoming
+url: https://huggingface.co/Cactus-Compute/whistle
+arch:
+  - aarch64
+  - amd64
+init: false
+discovery:
+  - wyoming
+ports:
+  10300/tcp: null
+ports_description:
+  10300/tcp: Wyoming STT (opcjonalnie, dla klientów spoza HA)
+options:
+  language: pl
+  keywords: []
+  debug: false
+schema:
+  language: list(en|de|fr|es|it|nl|pl)
+  keywords:
+    - str
+  debug: bool
