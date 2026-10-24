@@ -1,5 +1,5 @@
 name: Whistle STT
-version: 0.1.0
+version: 0.1.1
 slug: whistle_stt
 description: Lokalne rozpoznawanie mowy (Cactus Whistle) przez protokół Wyoming
 url: https://huggingface.co/Cactus-Compute/whistle

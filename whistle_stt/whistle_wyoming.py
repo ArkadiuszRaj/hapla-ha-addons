@@ -3,6 +3,7 @@
 import argparse
 import array
 import asyncio
+import json
 import logging
 from importlib.metadata import version
 from functools import partial
@@ -56,7 +57,12 @@ async def main():
     p.add_argument("--language", default="pl", choices=LANGUAGES)
     p.add_argument("--keyword", action="append", default=[], help="keyword biasing, repeatable")
     p.add_argument("--debug", action="store_true")
+    p.add_argument("--options", help="HA add-on options.json (language, keywords, debug)")
     args = p.parse_args()
+    if args.options:
+        with open(args.options, encoding="utf-8") as f:
+            o = json.load(f)
+        args.language, args.keyword, args.debug = o["language"], o["keywords"], o["debug"]
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
     model = needle.Whistle()
