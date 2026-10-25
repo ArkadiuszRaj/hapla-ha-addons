@@ -1,0 +1,36 @@
+name: HAPLA PLC
+version: 0.1.0
+slug: hapla_plc
+description: Podgląd, edycja, kompilacja i wgrywanie programów ST dla BRIDGE
+url: https://github.com/ArkadiuszRaj/hapla-ha-addons
+arch:
+  - aarch64
+  - amd64
+init: false
+ingress: true
+ingress_port: 8765
+panel_icon: mdi:code-braces
+panel_title: HAPLA PLC
+panel_admin: true
+# TFTP w BRIDGE odpowiada z nowego portu (TID) — przez NAT Dockera ta odpowiedź nie wraca.
+host_network: true
+options:
+  repo_url: git@github.com:ArkadiuszRaj/HAPLA.git
+  stxc_url: git@github.com:ArkadiuszRaj/STXC.git
+  branch: master
+  git_name: HAPLA PLC (Home Assistant)
+  git_email: hapla-plc@homeassistant.local
+  bridge_host: 192.168.1.10
+  bridge_port: 502
+  bridge_unit: 1
+  key_id: 2
+schema:
+  repo_url: str
+  stxc_url: str
+  branch: str
+  git_name: str
+  git_email: email
+  bridge_host: str
+  bridge_port: port
+  bridge_unit: int(1,247)
+  key_id: int(0,15)

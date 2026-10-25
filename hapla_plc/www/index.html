@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HAPLA PLC</title>
+<link rel="stylesheet" href="www/vendor/codemirror.min.css">
+<link rel="stylesheet" href="www/vendor/material-darker.min.css">
+<link rel="stylesheet" href="www/vendor/dialog.min.css">
+<style>
+:root {
+  --bg: #fafafa; --panel: #ffffff; --fg: #212121; --muted: #727272; --line: #e0e0e0;
+  --accent: #03a9f4; --ok: #43a047; --err: #db4437; --warn: #ffa600; --sel: #e1f5fe;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111111; --panel: #1c1c1c; --fg: #e1e1e1; --muted: #9b9b9b; --line: #2f2f2f;
+    --sel: #0d3550;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111111; --panel: #1c1c1c; --fg: #e1e1e1; --muted: #9b9b9b; --line: #2f2f2f; --sel: #0d3550;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+  font: 14px/1.4 Roboto, system-ui, sans-serif; }
+body { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 16px;
+  background: var(--panel); border-bottom: 1px solid var(--line); }
+header h1 { font-size: 18px; font-weight: 500; margin: 0 12px 0 0; }
+#status { flex: 1 1 260px; color: var(--muted); font-size: 13px; min-width: 0; }
+#status b { color: var(--fg); font-weight: 500; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; color: #fff; }
+.pill.ok { background: var(--ok); } .pill.err { background: var(--err); } .pill.warn { background: var(--warn); }
+button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:disabled { opacity: .5; cursor: default; }
+main { display: grid; grid-template-columns: 240px 1fr; grid-template-rows: 1fr 220px; min-height: 0; }
+#files { grid-row: 1 / 3; overflow: auto; border-right: 1px solid var(--line); background: var(--panel); }
+#files h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+  margin: 12px 12px 4px; font-weight: 500; }
+#files a { display: block; padding: 4px 12px; color: var(--fg); text-decoration: none; font-family: var(--mono);
+  font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+#files a.active { background: var(--sel); }
+#files a.dirty::after { content: " ●"; color: var(--warn); }
+#files a.ro { color: var(--muted); }
+#editor { min-height: 0; min-width: 0; position: relative; }
+#editor .CodeMirror { height: 100%; font-family: var(--mono); font-size: 13px; }
+#filebar { position: absolute; top: 0; right: 0; z-index: 5; padding: 2px 10px; font-size: 12px;
+  color: var(--muted); background: var(--panel); border-left: 1px solid var(--line);
+  border-bottom: 1px solid var(--line); border-bottom-left-radius: 6px; }
+#bottom { display: grid; grid-template-columns: minmax(200px, 35%) 1fr; border-top: 1px solid var(--line);
+  min-height: 0; background: var(--panel); }
+#errors { overflow: auto; border-right: 1px solid var(--line); }
+#errors div { padding: 4px 12px; cursor: pointer; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+#errors div:hover { background: var(--sel); }
+#errors .loc { font-family: var(--mono); color: var(--err); }
+#errors .none { color: var(--muted); cursor: default; }
+#log { margin: 0; padding: 8px 12px; overflow: auto; font: 12px/1.35 var(--mono); white-space: pre-wrap; }
+.cm-errline { background: rgba(219, 68, 55, .18) !important; }
+dialog { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--fg);
+  max-width: min(640px, calc(100vw - 32px)); width: 100%; }
+dialog::backdrop { background: rgba(0, 0, 0, .4); }
+dialog h3 { margin-top: 0; font-weight: 500; }
+dialog input, dialog textarea { width: 100%; font: inherit; padding: 6px 8px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--bg); color: var(--fg); }
+dialog pre { font: 11.5px var(--mono); background: var(--bg); padding: 8px; border-radius: 6px;
+  white-space: pre-wrap; word-break: break-all; }
+dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+dialog p { color: var(--muted); }
+@media (max-width: 720px) {
+  main { grid-template-columns: 1fr; grid-template-rows: auto 1fr 200px; }
+  #files { grid-row: auto; max-height: 120px; border-right: 0; border-bottom: 1px solid var(--line); }
+  #bottom { grid-template-columns: 1fr; }
+  #errors { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>HAPLA PLC</h1>
+  <div id="status">…</div>
+  <button id="bPull">Pobierz z git</button>
+  <button id="bSave">Zapisz</button>
+  <button id="bBuild" class="primary">Kompiluj i testuj</button>
+  <button id="bCommit">Commit i push</button>
+  <button id="bUpload">Wgraj do BRIDGE</button>
+  <button id="bKeys">Klucze</button>
+</header>
+<main>
+  <nav id="files"></nav>
+  <section id="editor"><div id="filebar"></div></section>
+  <section id="bottom">
+    <div id="errors"><div class="none">Brak błędów kompilacji</div></div>
+    <pre id="log"></pre>
+  </section>
+</main>
+
+<dialog id="dCommit">
+  <h3>Commit i push</h3>
+  <p>Zmiany w tools/plc/ctrl trafią na gałąź główną repozytorium HAPLA.</p>
+  <textarea id="cMsg" rows="3" placeholder="Opis zmian"></textarea>
+  <div class="row"><button data-close>Anuluj</button><button class="primary" id="cGo">Commit i push</button></div>
+</dialog>
+
+<dialog id="dUpload">
+  <h3>Wgraj programs.ilb do BRIDGE</h3>
+  <p id="uInfo"></p>
+  <input id="uPass" type="password" placeholder="Hasło klucza operatora HA" autocomplete="off">
+  <div class="row"><button data-close>Anuluj</button><button class="primary" id="uGo">Wgraj</button></div>
+</dialog>
+
+<dialog id="dKeys">
+  <h3>Klucze</h3>
+  <div id="kBody"></div>
+  <div class="row"><button data-close>Zamknij</button></div>
+</dialog>
+
+<script src="www/vendor/codemirror.min.js"></script>
+<script src="www/vendor/simple.min.js"></script>
+<script src="www/vendor/searchcursor.min.js"></script>
+<script src="www/vendor/dialog.min.js"></script>
+<script src="www/vendor/search.min.js"></script>
+<script src="www/app.js"></script>
+</body>
+</html>
