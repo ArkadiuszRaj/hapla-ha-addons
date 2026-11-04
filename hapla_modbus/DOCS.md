@@ -26,7 +26,7 @@ Indeks pokoju `i` to pozycja w `rooms[]` BRIDGE — ta sama, której używa
 
 | `index` | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| pokój | 01 Wiatrołap | 02 Przedpokój | 03 Kuchnia | 04 Salon | 05+19 Korytarz | 06 Tech suche | 07 Warsztat | 09 Pralnia | 10 Łazienka | 12 Sypialnia | 13 Garderoba | 14 Wiatrołap gościnny | 15 Pracownia | 16 Łazienka+sauna | 17 Gościnny | 20 Wiatrołap 3 |
+| pokój | 01 Wiatrołap | 02 Przedpokój | 03 Kuchnia | 04 Salon | 05+19 Hol | 06 Tech suchy | 07 Warsztat | 09 Pralnia | 10 Łazienka prywatna | 12 Sypialnia | 13 Garderoba | 14 Wiatrołap gościnny | 15 Pracownia | 16 Łazienka gościnna | 17 Gościnny | 20 Wiatrołap techniczny |
 
 W pomieszczeniu 08 (kotłownia, bez pętli CO) czujnik nie ma indeksu.
 
