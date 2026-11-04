@@ -1,5 +1,5 @@
 name: HAPLA PLC
-version: 0.1.0
+version: 0.1.1
 slug: hapla_plc
 description: Podgląd, edycja, kompilacja i wgrywanie programów ST dla BRIDGE
 url: https://github.com/ArkadiuszRaj/hapla-ha-addons
@@ -20,7 +20,7 @@ options:
   branch: master
   git_name: HAPLA PLC (Home Assistant)
   git_email: hapla-plc@homeassistant.local
-  bridge_host: 192.168.1.10
+  bridge_host: 192.168.3.2
   bridge_port: 502
   bridge_unit: 1
   key_id: 2

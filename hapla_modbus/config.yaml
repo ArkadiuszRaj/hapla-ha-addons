@@ -1,0 +1,34 @@
+name: HAPLA Modbus
+version: 0.1.0
+slug: hapla_modbus
+description: Serwer Modbus TCP — czujniki HA (pokoje, gleba) dla BRIDGE
+url: https://github.com/ArkadiuszRaj/hapla-ha-addons
+arch:
+  - aarch64
+  - amd64
+init: false
+homeassistant_api: true
+# BRIDGE odpytuje HA pod 192.168.3.20:502, unit 1 (hapla-regs.json, doc/ip_map.md).
+ports:
+  502/tcp: 502
+ports_description:
+  502/tcp: Modbus TCP (BRIDGE → HA)
+options:
+  unit: 1
+  poll_s: 10
+  max_age_s: 7200
+  rooms: []
+  soil: []
+schema:
+  unit: int(1,247)
+  poll_s: int(2,300)
+  max_age_s: int(0,86400)
+  rooms:
+    - index: int(0,15)
+      name: str?
+      temperature: str
+      humidity: str?
+  soil:
+    - index: int(0,1)
+      name: str?
+      moisture: str
