@@ -24,11 +24,23 @@ odpowiada przez 60 s — wszystkie rejestry.
 Indeks pokoju `i` to pozycja w `rooms[]` BRIDGE — ta sama, której używa
 `tools/ha/hapla_ha.yaml` (nastawy `rooms[i].tz`) i tabela pętli `_loop_room`:
 
-| `index` | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| pokój | 01 Wiatrołap | 02 Przedpokój | 03 Kuchnia | 04 Salon | 05+19 Hol | 06 Tech suchy | 07 Warsztat | 09 Pralnia | 10 Łazienka prywatna | 12 Sypialnia | 13 Garderoba | 14 Wiatrołap gościnny | 15 Pracownia | 16 Łazienka gościnna | 17 Gościnny | 20 Wiatrołap techniczny |
-
-W pomieszczeniu 08 (kotłownia, bez pętli CO) czujnik nie ma indeksu.
+| `index` | pomieszczenie |
+|---|---|
+| 0 | 01 Wiatrołap |
+| 1 | 04 Salon (z kuchnią 03) |
+| 2 | 05 Hol (z 19 i przedpokojem 02) |
+| 3 | 06 Tech suchy (bez pętli, pomiar) |
+| 4 | 07 Warsztat |
+| 5 | 08 Tech mokry (bez pętli, pomiar) |
+| 6 | 09 Pralnia |
+| 7 | 10 Łazienka prywatna |
+| 8 | 12 Sypialnia (z garderobą 13) |
+| 9 | 14 Wiatrołap gościnny |
+| 10 | 15 Pracownia |
+| 11 | 16 Łazienka gościnna |
+| 12 | 17 Gościnny |
+| 13 | 20 Wiatrołap techniczny |
+| 14, 15 | wolne |
 
 ## Konfiguracja
 
