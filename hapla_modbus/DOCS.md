@@ -22,8 +22,13 @@ nienumeryczna albo nieodświeżona dłużej niż `max_age_s`; gdy API HA nie
 odpowiada przez 60 s — wszystkie rejestry.
 
 Indeks pokoju `i` to pozycja w `rooms[]` BRIDGE — ta sama, której używa
-`tools/ha/hapla_ha.yaml` (nastawy `rooms[i].tz`). Przypisanie pokojów do
-indeksów nie jest jeszcze ustalone (OQ-2 w `tools/plc/ctrl/doc/architecture.md`).
+`tools/ha/hapla_ha.yaml` (nastawy `rooms[i].tz`) i tabela pętli `_loop_room`:
+
+| `index` | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| pokój | 01 Wiatrołap | 02 Przedpokój | 03 Kuchnia | 04 Salon | 05+19 Korytarz | 06 Tech suche | 07 Warsztat | 09 Pralnia | 10 Łazienka | 12 Sypialnia | 13 Garderoba | 14 Wiatrołap gościnny | 15 Pracownia | 16 Łazienka+sauna | 17 Gościnny | 20 Wiatrołap 3 |
+
+W pomieszczeniu 08 (kotłownia, bez pętli CO) czujnik nie ma indeksu.
 
 ## Konfiguracja
 
