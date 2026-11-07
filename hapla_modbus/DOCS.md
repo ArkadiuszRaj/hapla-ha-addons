@@ -49,7 +49,7 @@ unit: 1
 poll_s: 10          # co ile sekund odczyt stanów z HA
 max_age_s: 7200     # starszy odczyt = brak czujnika; 0 = bez limitu
 rooms:
-  - index: 3
+  - index: 1
     name: Salon
     temperature: sensor.salon_temperatura
     humidity: sensor.salon_wilgotnosc
