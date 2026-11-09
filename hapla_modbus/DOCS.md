@@ -22,7 +22,7 @@ nienumeryczna albo nieodświeżona dłużej niż `max_age_s`; gdy API HA nie
 odpowiada przez 60 s — wszystkie rejestry.
 
 Indeks pokoju `i` to pozycja w `rooms[]` BRIDGE — ta sama, której używa
-`tools/ha/hapla_ha.yaml` (nastawy `rooms[i].tz`) i tabela pętli `_loop_room`:
+`config/hapla_ha.yaml` (nastawy `rooms[i].tz`) i tabela pętli `_loop_room`:
 
 | `index` | pomieszczenie |
 |---|---|

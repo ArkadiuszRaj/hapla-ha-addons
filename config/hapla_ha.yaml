@@ -1,0 +1,61 @@
+# Konfiguracja wizualizacji HAPLA w Home Assistant — jedyne miejsce, które edytuje się ręcznie.
+# gen_ha.py czyta ten plik i mapę rejestrów (tools/plc/ctrl/build/hapla-regs.csv), a potem
+# zapisuje pakiety HA do packages/ i dashboard przepływu do dashboards/ + www/.
+#
+# Pozycja na liście = indeks rooms[i] w BRIDGE, ta sama co w tabeli pętli _loop_room
+# (tools/plc/ctrl/hapla-io-map.st, doc/inventory.md §2.1.1) — kolejności nie zmieniać
+# bez zmiany tamtej tabeli. Jedna przestrzeń = jeden indeks i jeden czujnik TIMMERFLOTTE
+# (decyzje inwestora 2026-11-04): salon 04 z kuchnią 03, hol 05 z 19 i przedpokojem 02,
+# sypialnia 12 z garderobą 13. 06 i 08 nie mają pętli — tylko pomiar T/RH.
+# 14 z 16 miejsc zajęte, 14 i 15 wolne.
+# Numeracja (id) = numer strefy z APB_01 „Rzut podstawowy – parter” (nie ma tam 11 ani 18).
+
+bridge:
+  host: 192.168.3.2      # BRIDGE, Modbus TCP slave (jak modbus_host w W4)
+  port: 502
+  unit: 1
+  scan_interval: 30       # s; plan W3 zmienia się co godzinę, W2 co 15 min
+
+# Moc grzałki CWU nie jest nigdzie zapisana w repo (inventory.md §2.1 podaje tylko, że jest).
+# Grzałki bufora mają C_HTR_KW = 6 kW (hapla-const.st).
+heater_kw: 6.0
+hcwu_kw: 3.0              # ZAŁOŻENIE do potwierdzenia z tabliczki grzałki SWA
+
+# Zakres nastaw pokoju: rooms[i].tz jest w pełnych °C (skala 1), więc krok "cieplej/chłodniej"
+# to 1 K.
+tz_min: 10
+tz_max: 26
+offset_min: -3
+offset_max: 3
+
+# Programy. Każdy pokój ma nastawę "dzien" (tools/ozc/dzien.yaml) i "urlop"
+# (tools/ozc/urlop.yaml); pozostałe programy liczą się od nich:
+#   normalny    — dzien + przesunięcie cieplej/chłodniej
+#   nieobecnosc — dzien − 3 K (nie mniej niż 16 °C) + przesunięcie
+#   impreza     — dzien + przesunięcie, w pokojach z "impreza: -1" o 1 K mniej (goście grzeją)
+#   urlop       — nastawa urlop, bez przesunięcia; vacation_mode = 1 (rolety zamknięte)
+absence_drop: 3
+absence_floor: 16
+# Podłogówka z buforem reaguje w godzinach, więc z urlopu wracamy wcześniej o tyle godzin.
+vacation_preheat_h: 24
+
+# Opcjonalnie per pokój: light: light.xxx — rzut parteru podświetla pokój, gdy światło świeci.
+rooms:
+  - {id: 1,  name: "Wiatrołap",          dzien: 18, urlop: 12}
+  - {id: 4,  name: "Salon",              dzien: 23, urlop: 14, impreza: -1}   # + kuchnia 03
+  - {id: 5,  name: "Hol",                dzien: 22, urlop: 14}   # + 19, przedpokój 02
+  - {id: 6,  name: "Tech suchy",         dzien: 17, urlop: 12}   # bez pętli, pomiar
+  - {id: 7,  name: "Warsztat",           dzien: 18, urlop: 12}
+  - {id: 8,  name: "Tech mokry",         dzien: 17, urlop: 12}   # bez pętli, pomiar
+  - {id: 9,  name: "Pralnia",            dzien: 18, urlop: 14}
+  - {id: 10, name: "Łazienka prywatna",  dzien: 23, urlop: 14}
+  - {id: 12, name: "Sypialnia",          dzien: 22, urlop: 14}   # + garderoba 13
+  - {id: 14, name: "Wiatrołap gościnny", dzien: 18, urlop: 12}
+  - {id: 15, name: "Pracownia",          dzien: 22, urlop: 14}
+  - {id: 16, name: "Łazienka gościnna",  dzien: 23, urlop: 14}
+  - {id: 17, name: "Gościnny",           dzien: 22, urlop: 14}
+  - {id: 20, name: "Wiatrołap techniczny", dzien: 18, urlop: 12}
+
+# Kamery: w repo nie ma żadnej kamery. Wpisz tu encje camera.* z HA, a dashboard je pokaże.
+cameras: []
+#  - {entity: camera.wejscie, name: "Wejście"}
