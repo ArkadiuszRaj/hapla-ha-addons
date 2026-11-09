@@ -433,6 +433,15 @@ INVOICE_REGS_TEMPLATE = (
     "{%- else -%}{{ [0, 0, 0, 0] }}{%- endif -%}")
 
 
+# Data po polsku niezależnie od locale HA (strftime %A/%B daje nazwy angielskie).
+DATE_PL_TEMPLATE = (
+    "{%- set n = now() -%}"
+    "{{ ['poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota', 'niedziela'][n.weekday()] }}, "
+    "{{ n.day }} "
+    "{{ ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', "
+    "'września', 'października', 'listopada', 'grudnia'][n.month - 1] }}")
+
+
 def build_control(cfg: dict) -> dict:
     hk, ck = cfg['heater_kw'] * 1000, cfg['hcwu_kw'] * 1000
     rooms = [room_key(r) for r in cfg['rooms']]
@@ -499,7 +508,7 @@ def build_control(cfg: dict) -> dict:
             {'name': 'hapla_clock', 'unique_id': 'hapla_clock',
              'state': "{{ now().strftime('%H:%M') }}"},
             {'name': 'hapla_date', 'unique_id': 'hapla_date',
-             'state': "{{ now().strftime('%A, %d %B') }}"},
+             'state': DATE_PL_TEMPLATE},
         ],
     }
     return {

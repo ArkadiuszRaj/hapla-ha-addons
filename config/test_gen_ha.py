@@ -317,6 +317,15 @@ class ClockSensors(unittest.TestCase):
         self.assertEqual(names, {'hapla_clock', 'hapla_date'})
         self.assertEqual(trig['trigger'][0]['trigger'], 'time_pattern')
 
+    def test_date_in_polish(self):
+        from datetime import datetime
+        trig = next(b for b in self.pkg['template'] if 'trigger' in b)
+        tpl = next(s['state'] for s in trig['sensor'] if s['name'] == 'hapla_date')
+        for now, want in ((datetime(2026, 11, 9), 'poniedziałek, 9 listopada'),
+                          (datetime(2026, 3, 1), 'niedziela, 1 marca'),
+                          (datetime(2026, 5, 23), 'sobota, 23 maja')):
+            self.assertEqual(render(tpl, now=lambda: now), want)
+
 
 class TabletCharging(unittest.TestCase):
     def _auto_ids(self, cfg):
