@@ -223,7 +223,7 @@ class Dashboards(unittest.TestCase):
 
     def test_every_used_entity_is_defined(self):
         defined = self.defined()
-        for name in ('hapla_sterowanie', 'hapla_przeplyw'):
+        for name in ('hapla_sterowanie', 'hapla_przeplyw', 'hapla_sciana'):
             used = entity_ids(self.out['dashboards'][name])
             self.assertFalse(used - defined, f'{name}: niezdefiniowane encje')
 
@@ -259,7 +259,86 @@ class Dashboards(unittest.TestCase):
             files = sorted(str(p.relative_to(d)) for p in Path(d).rglob('*') if p.is_file())
         self.assertIn('packages/hapla_modbus.yaml', files)
         self.assertIn('dashboards/hapla_przeplyw.yaml', files)
+        self.assertIn('dashboards/hapla_sciana.yaml', files)
         self.assertIn('www/hapla/przeplyw.svg', files)
+
+
+def _view(dashboard):
+    return dashboard['views'][0]
+
+
+class WallDashboard(unittest.TestCase):
+    plan = gen_ha.build_plan_svgs(CFG)
+
+    def _cfg(self, **wall):
+        c = {**CFG, 'wall_panel': {**(CFG.get('wall_panel') or {}), **wall}}
+        return c
+
+    def test_panel_view_single_card(self):
+        v = _view(gen_ha.build_wall_dashboard(CFG, self.plan))
+        self.assertEqual(v['type'], 'panel')
+        self.assertEqual(len(v['cards']), 1)
+
+    def test_landscape_uses_horizontal_stack(self):
+        v = _view(gen_ha.build_wall_dashboard(self._cfg(orientation='landscape'), self.plan))
+        self.assertEqual(v['cards'][0]['type'], 'horizontal-stack')
+
+    def test_portrait_uses_vertical_stack(self):
+        v = _view(gen_ha.build_wall_dashboard(self._cfg(orientation='portrait'), self.plan))
+        self.assertEqual(v['cards'][0]['type'], 'vertical-stack')
+
+    def test_hero_without_camera_is_floor_plan(self):
+        v = _view(gen_ha.build_wall_dashboard(self._cfg(hero={'camera': None}), self.plan))
+        hero = v['cards'][0]['cards'][0]
+        self.assertEqual(hero['type'], 'picture-elements')
+        self.assertIn('rzut.svg', hero['image'])
+
+    def test_hero_with_camera_is_picture_entity(self):
+        v = _view(gen_ha.build_wall_dashboard(
+            self._cfg(hero={'camera': 'camera.ogrod_na_dom'}), self.plan))
+        hero = v['cards'][0]['cards'][0]
+        self.assertEqual(hero['type'], 'picture-entity')
+        self.assertEqual(hero['entity'], 'camera.ogrod_na_dom')
+
+    def test_favorites_appear_as_tiles(self):
+        v = _view(gen_ha.build_wall_dashboard(self._cfg(favorites=[4, 12, 15]), self.plan))
+        used = entity_ids(v)
+        self.assertIn('sensor.hapla_room04_t', used)   # Salon
+        self.assertIn('sensor.hapla_room12_t', used)   # Sypialnia
+        self.assertIn('sensor.hapla_room15_t', used)   # Pracownia
+
+
+class ClockSensors(unittest.TestCase):
+    pkg = gen_ha.build_control(CFG)
+
+    def test_clock_and_date_are_trigger_template(self):
+        trig = next(b for b in self.pkg['template'] if 'trigger' in b)
+        names = {s['name'] for s in trig['sensor']}
+        self.assertEqual(names, {'hapla_clock', 'hapla_date'})
+        self.assertEqual(trig['trigger'][0]['trigger'], 'time_pattern')
+
+
+class TabletCharging(unittest.TestCase):
+    def _auto_ids(self, cfg):
+        return [a['id'] for a in gen_ha.build_automation(cfg)['automation']]
+
+    def test_absent_when_sensor_or_switch_missing(self):
+        self.assertNotIn('hapla_tablet_charge_on', self._auto_ids(CFG))
+        cfg = {**CFG, 'wall_panel': {'tablet': {'battery_sensor': 'sensor.x', 'power_switch': None}}}
+        self.assertNotIn('hapla_tablet_charge_on', self._auto_ids(cfg))
+
+    def test_present_when_both_set(self):
+        cfg = {**CFG, 'wall_panel': {'tablet': {
+            'battery_sensor': 'sensor.korytarz_tablet_battery',
+            'power_switch': 'switch.eve_energy_korytarz',
+            'charge_below': 30, 'charge_above': 80}}}
+        autos = gen_ha.build_automation(cfg)['automation']
+        on = next(a for a in autos if a['id'] == 'hapla_tablet_charge_on')
+        off = next(a for a in autos if a['id'] == 'hapla_tablet_charge_off')
+        self.assertEqual(on['triggers'][0]['below'], 30)
+        self.assertEqual(off['triggers'][0]['above'], 80)
+        self.assertEqual(on['actions'][0]['action'], 'switch.turn_on')
+        self.assertEqual(off['actions'][0]['action'], 'switch.turn_off')
 
 
 if __name__ == '__main__':

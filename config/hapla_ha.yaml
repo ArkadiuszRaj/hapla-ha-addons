@@ -59,3 +59,21 @@ rooms:
 # Kamery: w repo nie ma żadnej kamery. Wpisz tu encje camera.* z HA, a dashboard je pokaże.
 cameras: []
 #  - {entity: camera.wejscie, name: "Wejście"}
+
+# Panel ścienny HAPLA. Generuje dashboard "HAPLA Ściana" dla tabletu w korytarzu.
+# Orientacja: landscape (hero po lewej, kontrolki po prawej) lub portrait (hero u góry).
+# Hero: jeśli hero.camera jest encją camera.* — pokazuje jej live view. W przeciwnym
+# razie — rzut parteru z nakładkami temperatur wszystkich pokojów.
+# tablet: gdy battery_sensor i power_switch są podane, codegen dołącza automatyki
+# start/stop ładowania. Eve Energy włącza się poniżej charge_below i wyłącza
+# powyżej charge_above. Oba null — brak automatyki (tablet zasilany ciągle).
+wall_panel:
+  orientation: landscape
+  hero:
+    camera: null         # np. camera.ogrod_na_dom, gdy kamera dostępna
+  favorites: [4, 12, 15] # Salon, Sypialnia, Pracownia
+  tablet:
+    battery_sensor: null # np. sensor.korytarz_tablet_battery (Fully Kiosk MQTT)
+    power_switch: null   # np. switch.eve_energy_korytarz
+    charge_below: 30
+    charge_above: 80

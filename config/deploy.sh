@@ -27,7 +27,18 @@ ssh "$HA_SSH" 'test -e /homeassistant/www/hapla/contract.yaml' || \
 ssh "$HA_SSH" 'sudo sh -s' <<'EOF'
 set -e
 cfg=/homeassistant/configuration.yaml
-grep -q 'hapla_sterowanie.yaml' "$cfg" && exit 0
+grep -q 'hapla_sciana.yaml' "$cfg" && exit 0
+if grep -q 'hapla_sterowanie.yaml' "$cfg"; then
+  echo '[deploy] configuration.yaml ma już dashboardy HAPLA, ale brak hapla-sciana.' >&2
+  echo '[deploy] Dodaj ręcznie pod lovelace.dashboards:' >&2
+  echo '[deploy]     hapla-sciana:' >&2
+  echo '[deploy]       mode: yaml' >&2
+  echo '[deploy]       title: HAPLA Ściana' >&2
+  echo '[deploy]       icon: mdi:tablet-dashboard' >&2
+  echo '[deploy]       show_in_sidebar: true' >&2
+  echo '[deploy]       filename: dashboards/hapla_sciana.yaml' >&2
+  exit 0
+fi
 cp "$cfg" "$cfg.hapla-bak"
 cat >> "$cfg" <<'YAML'
 
@@ -48,6 +59,12 @@ lovelace:
       icon: mdi:transmission-tower
       show_in_sidebar: true
       filename: dashboards/hapla_przeplyw.yaml
+    hapla-sciana:
+      mode: yaml
+      title: HAPLA Ściana
+      icon: mdi:tablet-dashboard
+      show_in_sidebar: true
+      filename: dashboards/hapla_sciana.yaml
 YAML
 EOF
 

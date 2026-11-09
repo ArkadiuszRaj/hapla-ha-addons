@@ -15,6 +15,7 @@ Wyjście (--out-dir, domyślnie import/hapla-ha-addons/config/build/, gitignore'
     packages/hapla_automation.yaml  — automatyki i skrypty przycisków
     dashboards/hapla_sterowanie.yaml
     dashboards/hapla_przeplyw.yaml
+    dashboards/hapla_sciana.yaml
     www/hapla/*.svg                 — schemat przepływu + nakładki animowane
     www/hapla/rzut*.svg             — rzut parteru + podświetlenia pokojów z włączonym światłem
 
@@ -488,6 +489,18 @@ def build_control(cfg: dict) -> dict:
         'binary_sensor.hapla_can_a': {'friendly_name': 'CAN – gałąź A'},
         'binary_sensor.hapla_can_b': {'friendly_name': 'CAN – gałąź B'},
         'binary_sensor.hapla_can_time_ok': {'friendly_name': 'CAN – czas ważny'},
+        'sensor.hapla_clock': {'friendly_name': 'Zegar'},
+        'sensor.hapla_date': {'friendly_name': 'Data'},
+    }
+    # Zegar/data odświeżają się co minutę. Pasek statusu panelu ściennego ich używa.
+    clock = {
+        'trigger': [{'trigger': 'time_pattern', 'minutes': '/1'}],
+        'sensor': [
+            {'name': 'hapla_clock', 'unique_id': 'hapla_clock',
+             'state': "{{ now().strftime('%H:%M') }}"},
+            {'name': 'hapla_date', 'unique_id': 'hapla_date',
+             'state': "{{ now().strftime('%A, %d %B') }}"},
+        ],
     }
     return {
         'input_select': {'hapla_program': {
@@ -513,7 +526,7 @@ def build_control(cfg: dict) -> dict:
                                      'icon': 'mdi:calendar-star'},
             'hapla_holidays_easter': {'name': 'Święta ruchome (dni po Wielkanocy)', 'max': 100,
                                       'icon': 'mdi:egg-easter'}},
-        'template': [{'sensor': sensors}, {'binary_sensor': binary}],
+        'template': [{'sensor': sensors}, {'binary_sensor': binary}, clock],
         'homeassistant': {'customize': customize},
     }
 
@@ -524,77 +537,94 @@ def build_automation(cfg: dict) -> dict:
         'action': 'input_number.set_value', 'target': {'entity_id': 'input_number.hapla_offset'},
         'data': {'value': f"{{{{ [[states('input_number.hapla_offset') | int(0) {d}, {lo}] | max, {hi}] | min }}}}"},
     }]
+    automations = [
+        {
+            'id': 'hapla_apply_setpoints',
+            'alias': 'HAPLA – zapis nastaw do BRIDGE',
+            'description': 'Po zmianie programu lub przesunięcia, po starcie HA i co 5 min '
+                           '(BRIDGE po restarcie ma rooms[i].tz = 0).',
+            'mode': 'queued', 'max': 2,
+            'triggers': [
+                {'trigger': 'state', 'entity_id': ['input_select.hapla_program', 'input_number.hapla_offset']},
+                {'trigger': 'homeassistant', 'event': 'start'},
+                {'trigger': 'time_pattern', 'minutes': '/5'},
+            ],
+            'actions': [{'action': 'script.hapla_apply_setpoints'}],
+        },
+        {
+            'id': 'hapla_write_holidays',
+            'alias': 'HAPLA – zapis świąt do BRIDGE',
+            'description': 'Po zmianie list, po starcie HA i co 15 min (BRIDGE po restarcie ma zera = '
+                           'lista domyślna). Czyta je kalendarz ST i W4 (taryfa: dzień wolny).',
+            'mode': 'queued', 'max': 2,
+            'triggers': [
+                {'trigger': 'state', 'entity_id': ['input_text.hapla_holidays_fixed',
+                                                   'input_text.hapla_holidays_easter']},
+                {'trigger': 'homeassistant', 'event': 'start'},
+                {'trigger': 'time_pattern', 'minutes': '/15'},
+            ],
+            'actions': [
+                {'action': 'modbus.write_register', 'data': {
+                    'hub': HUB, 'slave': cfg['bridge']['unit'], 'address': HOLIDAY_FIXED_REG,
+                    'value': holiday_regs_template('fixed')}},
+                {'action': 'modbus.write_register', 'data': {
+                    'hub': HUB, 'slave': cfg['bridge']['unit'], 'address': HOLIDAY_EASTER_REG,
+                    'value': holiday_regs_template('easter')}},
+            ],
+        },
+        {
+            'id': 'hapla_write_invoice',
+            'alias': 'HAPLA – zapis faktury (depozyt) do BRIDGE',
+            'description': 'Data i saldo depozytu z ostatniej faktury → deposit.inv_* (%MW9130). '
+                           'W4 kotwiczy nimi księgę z licznika i pokazuje różnicę. Saldo −1 = brak faktury.',
+            'mode': 'queued', 'max': 2,
+            'triggers': [
+                {'trigger': 'state', 'entity_id': ['input_datetime.hapla_invoice_date',
+                                                   'input_number.hapla_invoice_balance']},
+                {'trigger': 'homeassistant', 'event': 'start'},
+                {'trigger': 'time_pattern', 'minutes': '/15'},
+            ],
+            'actions': [{'action': 'modbus.write_register', 'data': {
+                'hub': HUB, 'slave': cfg['bridge']['unit'], 'address': DEPOSIT_REG,
+                'value': INVOICE_REGS_TEMPLATE}}],
+        },
+        {
+            'id': 'hapla_vacation_return',
+            'alias': 'HAPLA – koniec urlopu',
+            'description': f"{cfg['vacation_preheat_h']} h przed powrotem wraca program Normalny "
+                           '(podłogówka z buforem potrzebuje czasu na nagrzanie). Data powrotu '
+                           'z przeszłości = brak automatycznego powrotu.',
+            'triggers': [{'trigger': 'template', 'value_template':
+                          "{% set ret = states('input_datetime.hapla_vacation_return') | as_datetime %}"
+                          "{{ is_state('input_select.hapla_program', 'Urlop') and ret is not none and "
+                          f"ret | as_local - timedelta(hours={cfg['vacation_preheat_h']}) <= now() < ret | as_local }}}}"}],
+            'actions': [{'action': 'input_select.select_option',
+                         'target': {'entity_id': 'input_select.hapla_program'},
+                         'data': {'option': 'Normalny'}}],
+        },
+    ]
+    tbl = (cfg.get('wall_panel') or {}).get('tablet') or {}
+    bat, sw = tbl.get('battery_sensor'), tbl.get('power_switch')
+    if bat and sw:
+        clo, chi = tbl.get('charge_below', 30), tbl.get('charge_above', 80)
+        automations.extend([
+            {'id': 'hapla_tablet_charge_on',
+             'alias': 'HAPLA – start ładowania tabletu',
+             'description': f'Gniazdko włącza się, gdy bateria tabletu spadnie poniżej {clo} %.',
+             'triggers': [{'trigger': 'numeric_state', 'entity_id': bat, 'below': clo}],
+             'actions': [{'action': 'switch.turn_on', 'target': {'entity_id': sw}}]},
+            {'id': 'hapla_tablet_charge_off',
+             'alias': 'HAPLA – stop ładowania tabletu',
+             'description': f'Gniazdko wyłącza się, gdy bateria tabletu przekroczy {chi} %.',
+             'triggers': [{'trigger': 'numeric_state', 'entity_id': bat, 'above': chi}],
+             'actions': [{'action': 'switch.turn_off', 'target': {'entity_id': sw}}]},
+        ])
     return {
         'script': {
             'hapla_warmer': {'alias': 'HAPLA – cieplej', 'icon': 'mdi:thermometer-plus', 'sequence': step('+ 1')},
             'hapla_cooler': {'alias': 'HAPLA – chłodniej', 'icon': 'mdi:thermometer-minus', 'sequence': step('- 1')},
         },
-        'automation': [
-            {
-                'id': 'hapla_apply_setpoints',
-                'alias': 'HAPLA – zapis nastaw do BRIDGE',
-                'description': 'Po zmianie programu lub przesunięcia, po starcie HA i co 5 min '
-                               '(BRIDGE po restarcie ma rooms[i].tz = 0).',
-                'mode': 'queued', 'max': 2,
-                'triggers': [
-                    {'trigger': 'state', 'entity_id': ['input_select.hapla_program', 'input_number.hapla_offset']},
-                    {'trigger': 'homeassistant', 'event': 'start'},
-                    {'trigger': 'time_pattern', 'minutes': '/5'},
-                ],
-                'actions': [{'action': 'script.hapla_apply_setpoints'}],
-            },
-            {
-                'id': 'hapla_write_holidays',
-                'alias': 'HAPLA – zapis świąt do BRIDGE',
-                'description': 'Po zmianie list, po starcie HA i co 15 min (BRIDGE po restarcie ma zera = '
-                               'lista domyślna). Czyta je kalendarz ST i W4 (taryfa: dzień wolny).',
-                'mode': 'queued', 'max': 2,
-                'triggers': [
-                    {'trigger': 'state', 'entity_id': ['input_text.hapla_holidays_fixed',
-                                                       'input_text.hapla_holidays_easter']},
-                    {'trigger': 'homeassistant', 'event': 'start'},
-                    {'trigger': 'time_pattern', 'minutes': '/15'},
-                ],
-                'actions': [
-                    {'action': 'modbus.write_register', 'data': {
-                        'hub': HUB, 'slave': cfg['bridge']['unit'], 'address': HOLIDAY_FIXED_REG,
-                        'value': holiday_regs_template('fixed')}},
-                    {'action': 'modbus.write_register', 'data': {
-                        'hub': HUB, 'slave': cfg['bridge']['unit'], 'address': HOLIDAY_EASTER_REG,
-                        'value': holiday_regs_template('easter')}},
-                ],
-            },
-            {
-                'id': 'hapla_write_invoice',
-                'alias': 'HAPLA – zapis faktury (depozyt) do BRIDGE',
-                'description': 'Data i saldo depozytu z ostatniej faktury → deposit.inv_* (%MW9130). '
-                               'W4 kotwiczy nimi księgę z licznika i pokazuje różnicę. Saldo −1 = brak faktury.',
-                'mode': 'queued', 'max': 2,
-                'triggers': [
-                    {'trigger': 'state', 'entity_id': ['input_datetime.hapla_invoice_date',
-                                                       'input_number.hapla_invoice_balance']},
-                    {'trigger': 'homeassistant', 'event': 'start'},
-                    {'trigger': 'time_pattern', 'minutes': '/15'},
-                ],
-                'actions': [{'action': 'modbus.write_register', 'data': {
-                    'hub': HUB, 'slave': cfg['bridge']['unit'], 'address': DEPOSIT_REG,
-                    'value': INVOICE_REGS_TEMPLATE}}],
-            },
-            {
-                'id': 'hapla_vacation_return',
-                'alias': 'HAPLA – koniec urlopu',
-                'description': f"{cfg['vacation_preheat_h']} h przed powrotem wraca program Normalny "
-                               '(podłogówka z buforem potrzebuje czasu na nagrzanie). Data powrotu '
-                               'z przeszłości = brak automatycznego powrotu.',
-                'triggers': [{'trigger': 'template', 'value_template':
-                              "{% set ret = states('input_datetime.hapla_vacation_return') | as_datetime %}"
-                              "{{ is_state('input_select.hapla_program', 'Urlop') and ret is not none and "
-                              f"ret | as_local - timedelta(hours={cfg['vacation_preheat_h']}) <= now() < ret | as_local }}}}"}],
-                'actions': [{'action': 'input_select.select_option',
-                             'target': {'entity_id': 'input_select.hapla_program'},
-                             'data': {'option': 'Normalny'}}],
-            },
-        ],
+        'automation': automations,
     }
 
 # endregion
@@ -926,6 +956,86 @@ def build_control_dashboard(cfg: dict, plan: dict) -> dict:
         {'title': 'Szczegóły', 'path': 'szczegoly', 'cards': detail},
     ]}
 
+
+def _wall_hero(camera_entity: str | None, cfg: dict, plan: dict) -> dict:
+    """Hero panelu ściennego: live view kamery lub rzut parteru z temperaturami."""
+    if camera_entity:
+        return {'type': 'picture-entity', 'entity': camera_entity,
+                'camera_view': 'live', 'show_name': False, 'show_state': False}
+    url = lambda f: f'/local/hapla/{f}?v={hashlib.sha1(plan[f].encode()).hexdigest()[:8]}'  # noqa: E731
+    pos = lambda x, y: {'left': f'{x / PLAN_W * 100:.1f}%', 'top': f'{y / PLAN_H * 100:.1f}%'}  # noqa: E731
+    elements = []
+    for room in cfg['rooms']:
+        if room['id'] not in PLAN:
+            continue
+        x, y = _plan_xy(*PLAN[room['id']][0])
+        elements.append({'type': 'state-label', 'entity': f'sensor.{room_key(room)}_t',
+                         'style': {**pos(x, y + 30), 'font-size': '14px', 'font-weight': '700'}})
+    return {'type': 'picture-elements', 'image': url('rzut.svg'), 'elements': elements}
+
+
+def build_wall_dashboard(cfg: dict, plan: dict) -> dict:
+    """Dashboard "HAPLA Ściana" dla tabletu w korytarzu. Układ zależny od orientacji."""
+    wp = cfg.get('wall_panel') or {}
+    orientation = wp.get('orientation', 'landscape')
+    hero_camera = (wp.get('hero') or {}).get('camera')
+    fav_ids = wp.get('favorites') or []
+    rooms_by_id = {r['id']: r for r in cfg['rooms']}
+    favs = [rooms_by_id[i] for i in fav_ids if i in rooms_by_id]
+
+    hero = _wall_hero(hero_camera, cfg, plan)
+    tile = lambda e, **kw: {'type': 'tile', 'entity': e, **kw}  # noqa: E731
+
+    main = favs[0] if favs else cfg['rooms'][0]
+    status = {'type': 'markdown', 'content': (
+        "# {{ states('sensor.hapla_clock') }}\n"
+        "**{{ states('sensor.hapla_date') }}**\n\n"
+        f"🏠 {{{{ states('sensor.{room_key(main)}_t') }}}} °C  ·  "
+        "🌳 {{ states('sensor.hapla_t_out_c') }} °C")}
+
+    alarm = {
+        'type': 'conditional',
+        'conditions': [{'condition': 'state', 'entity': 'binary_sensor.hapla_alarm', 'state': 'on'}],
+        'card': {'type': 'markdown',
+                 'content': '# ⚠ ALARM HAPLA\nOtwórz widok **Szczegóły** w dashboardzie HAPLA.'},
+    }
+
+    program = {'type': 'grid', 'columns': 2, 'square': False, 'cards': [
+        tile('input_select.hapla_program', name='Program',
+             features=[{'type': 'select-options'}], grid_options={'columns': 'full'}),
+        {'type': 'button', 'name': 'Chłodniej', 'icon': 'mdi:thermometer-minus',
+         'show_state': False,
+         'tap_action': {'action': 'perform-action', 'perform_action': 'script.hapla_cooler'}},
+        {'type': 'button', 'name': 'Cieplej', 'icon': 'mdi:thermometer-plus',
+         'show_state': False,
+         'tap_action': {'action': 'perform-action', 'perform_action': 'script.hapla_warmer'}},
+        tile('input_number.hapla_offset', name='Przesunięcie', grid_options={'columns': 'full'}),
+    ]}
+
+    rooms = {'type': 'grid', 'columns': 1, 'square': False, 'cards': [
+        {'type': 'heading', 'heading': 'Pokoje', 'icon': 'mdi:floor-plan'},
+        *(tile(f'sensor.{room_key(r)}_t', name=r['name']) for r in favs),
+    ]}
+
+    energy = {'type': 'grid', 'columns': 2, 'square': False, 'cards': [
+        {'type': 'heading', 'heading': 'Energia', 'icon': 'mdi:lightning-bolt',
+         'grid_options': {'columns': 'full'}},
+        tile('sensor.hapla_pv_w', name='PV'),
+        tile('sensor.hapla_soc', name='Bateria'),
+        tile('sensor.hapla_grid_w', name='Sieć'),
+        tile('sensor.hapla_tcwu_c', name='CWU'),
+    ]}
+
+    controls = {'type': 'vertical-stack', 'cards': [status, alarm, program, rooms, energy]}
+    if orientation == 'landscape':
+        root = {'type': 'horizontal-stack', 'cards': [hero, controls]}
+    else:
+        root = {'type': 'vertical-stack', 'cards': [hero, status, alarm, program, rooms, energy]}
+
+    return {'title': 'HAPLA Ściana', 'views': [{
+        'title': 'Ściana', 'path': 'sciana', 'type': 'panel', 'cards': [root],
+    }]}
+
 # endregion
 # region ─── Składanie i zapis ───────────────────────────────────────────────
 
@@ -943,6 +1053,7 @@ def build_all(cfg: dict, regs: dict, bregs: dict) -> dict:
         'dashboards': {
             'hapla_sterowanie': build_control_dashboard(cfg, plan),
             'hapla_przeplyw': build_flow_dashboard(cfg, www),
+            'hapla_sciana': build_wall_dashboard(cfg, plan),
         },
         'www': www,
         'plan': plan,
