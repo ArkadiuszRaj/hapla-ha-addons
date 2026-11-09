@@ -4,7 +4,7 @@ Wszystko, co HAPLA instaluje w Home Assistant, w jednym repo.
 
 | Katalog | Zawartość |
 |---|---|
-| `hapla_plc/`, `hapla_modbus/`, `whistle_stt/` | dodatki HA — sklep dodatków: `https://github.com/ArkadiuszRaj/hapla-ha-addons` |
+| `hapla_plc/`, `hapla_modbus/`, `whistle_stt/`, `pc_view_agent/` | dodatki HA — sklep dodatków: `https://github.com/ArkadiuszRaj/hapla-ha-addons` |
 | `config/` | konfiguracja HA: generator pakietów, dashboardów i SVG (`gen_ha.py` + `hapla_ha.yaml`), wdrożenie (`deploy.sh`), testy, symulator BRIDGE (`demo_bridge.py`) |
 
 Dashboardy: `hapla_sterowanie` (HAPLA), `hapla_przeplyw` (przepływy), `hapla_sciana` (panel ścienny na tablet — sekcja `wall_panel` w `hapla_ha.yaml`: orientacja, kamera albo rzut, ulubione pokoje, ładowanie tabletu).

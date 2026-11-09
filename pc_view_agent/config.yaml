@@ -1,0 +1,19 @@
+name: PC-View agent
+version: 0.1.0
+slug: pc_view_agent
+description: Monitor systemu (CPU, RAM, dysk, temperatury, sieć) jako JSON na porcie 9101 dla PC-View
+url: https://github.com/ArkadiuszRaj/hapla-ha-addons
+arch:
+  - aarch64
+init: false
+startup: services
+boot: auto
+# Port bezpośrednio na adresie hosta; host_pid — procesy i obciążenie całego HAOS, nie kontenera.
+host_network: true
+host_pid: true
+options:
+  port: 9101
+  token: ""
+schema:
+  port: port
+  token: str?
