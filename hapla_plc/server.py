@@ -2,9 +2,9 @@
 """
 HAPLA PLC — panel HA do programów ST dla BRIDGE.
 
-Źródła żyją w klonie repo HAPLA (/data/repo, sparse: tools/plc, scripts, import/stxc).
+Źródła żyją w klonie repo HAPLA (/data/repo, sparse: tools/plc, scripts, import/STXC).
 Przebieg jak w CMake (app/bridge/CMakeLists.txt: bridge_ilb + plc_tests):
-    make -C import/stxc release ilvm
+    make -C import/STXC release ilvm
     stage *.st + gen_hapla_regs.py → stxc -e ilb,map,json main.st
     tools/plc/ctrl/test/test_all.sh --ilb … --ilvm …
 Wgrywanie: scripts/bridge_tftp_push.py z repo (FC 0x4A + TFTP) kluczem operatora HA.
@@ -38,7 +38,7 @@ OUT = DATA / 'out'
 SSH = DATA / '.ssh'
 OPKEY = DATA / 'keys' / 'operator.pem'
 CTRL = 'tools/plc/ctrl'
-SPARSE = ['tools/plc', 'scripts', 'import/stxc']
+SPARSE = ['tools/plc', 'scripts', 'import/STXC']
 WWW = Path(__file__).resolve().parent / 'www'
 INGRESS_PROXY = '172.30.32.2'
 NAME_RE = re.compile(r'^[A-Za-z0-9_.-]+\.st$')
@@ -121,7 +121,7 @@ async def ensure_repo(opts: dict) -> None:
              opts['repo_url'], str(REPO))
     await sh('git', 'sparse-checkout', 'set', *SPARSE, cwd=REPO)
     await sh('git', 'checkout', opts['branch'], cwd=REPO)
-    await sh('git', 'submodule', 'update', '--init', 'import/stxc', cwd=REPO)
+    await sh('git', 'submodule', 'update', '--init', 'import/STXC', cwd=REPO)
 
 
 def src_files() -> list[Path]:
@@ -146,7 +146,7 @@ async def git_out(*args: str) -> str:
 
 
 async def do_build() -> None:
-    stxc = REPO / 'import/stxc'
+    stxc = REPO / 'import/STXC'
     await sh('nice', 'make', '-j2', 'release', 'ilvm', cwd=stxc)
     shutil.rmtree(STAGE, ignore_errors=True)
     (STAGE / 'build').mkdir(parents=True)
@@ -174,7 +174,7 @@ async def do_build() -> None:
 async def do_pull(opts: dict) -> None:
     await ensure_repo(opts)
     await sh('git', 'pull', '--rebase', '--autostash', 'origin', opts['branch'], cwd=REPO)
-    await sh('git', 'submodule', 'update', '--init', 'import/stxc', cwd=REPO)
+    await sh('git', 'submodule', 'update', '--init', 'import/STXC', cwd=REPO)
 
 
 async def do_commit(opts: dict, message: str) -> None:

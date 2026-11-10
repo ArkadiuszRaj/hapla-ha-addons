@@ -9,8 +9,8 @@ repozytorium HAPLA oraz wgranie `programs.ilb` do BRIDGE (FC 0x4A + TFTP).
 1. Uruchom dodatek, otwórz panel **HAPLA PLC** → **Klucze**.
 2. Dodaj dwa klucze wdrożeniowe na GitHubie (Settings → Deploy keys):
    - **HAPLA**: z zaznaczonym *Allow write access* (commit i push z panelu),
-   - **STXC**: wystarczy odczyt (kompilator budowany z submodułu `import/stxc`).
-3. **Pobierz z git** — sparse clone (`tools/plc`, `scripts`, `import/stxc`) w `/data/repo`.
+   - **STXC**: wystarczy odczyt (kompilator budowany z submodułu `import/STXC`).
+3. **Pobierz z git** — sparse clone (`tools/plc`, `scripts`, `import/STXC`) w `/data/repo`.
 4. **Kompiluj i testuj** — za pierwszym razem buduje też `stxc` (kilka minut na Odroidzie).
 
 ## Wgrywanie do BRIDGE
