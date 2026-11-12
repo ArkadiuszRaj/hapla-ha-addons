@@ -109,6 +109,16 @@ SENSORS = [
     ('h2_pct', 'bridge_ctrl.h2_pct', 'Grzałka bufora 2'),
     ('h3_pct', 'bridge_ctrl.h3_pct', 'Grzałka bufora 3'),
     ('hcwu_pct', 'bridge_ctrl.hcwu_pct', 'Grzałka CWU'),
+    # licznik ciepła podłogówki (HeatMeter, %MW7070): realne zapotrzebowanie vs OZC
+    ('heat_w',          'heat_meter.p_now_w',    'Ciepło podłogówki – moc'),
+    ('heat_hour_w',     'heat_meter.p_hour_w',   'Ciepło podłogówki – średnia godzinowa'),
+    ('heat_max_w',      'heat_meter.p_max_w',    'Ciepło podłogówki – maksimum godzinowe'),
+    ('heat_ref_w',      'heat_meter.p_ref_w',    'Ciepło – moc referencyjna OZC (−20/20 °C)'),
+    ('heat_day_kwh',    'heat_meter.e_day_kwh',  'Ciepło podłogówki – energia dziś'),
+    ('heat_prev_kwh',   'heat_meter.e_prev_kwh', 'Ciepło podłogówki – energia wczoraj'),
+    ('heat_ref_kwh',    'heat_meter.e_ref_kwh',  'Ciepło – energia referencyjna doby'),
+    ('heat_h_wpk',      'heat_meter.h_meas_wpk', 'Dom – zmierzone H (wczoraj)'),
+    ('heat_flow_kgh',   'heat_meter.flow_kgh',   'Podłogówka – przepływ (szacowany)'),
     # ESS Victron
     ('soc',       'ess.batt_soc_pct', 'Bateria – SOC'),
     ('batt_w',    'ess.batt_power_w', 'Bateria – moc'),
